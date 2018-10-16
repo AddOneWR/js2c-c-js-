@@ -4,19 +4,18 @@ const FUNC_NAME_MAP = require('./func-name-map');
 const FUNC_HANDLE_MAP = require('./func-handle-map');
 
 const inputArr = [
-  // `
-  //   int add(a,b){
-  //     double c = 1;
-  //   };
-  //   string str = "hello world";
-  //   int a = 3;
-  //   if ( a === 3 ) {
-  //     printf("num1: %d, num2: %d", a, b);
-  //   } else if ( a === 1 ) {
-  //     printf("no pass");
-  //   };
-  // `,
-  'printf("num1: %d, num2: %d", a, b)'
+  `
+    int add(a,b){
+      double c = 1;
+    };
+    string str = "hello world";
+    int a = 3;
+    if ( a === 3 ) {
+      printf("num1: %d, num2: %d", a, b);
+    } else if ( a === 1 ) {
+      printf("no pass");
+    };
+  `
 ];
 
 const WHITESPACE = /\s/;
@@ -478,8 +477,8 @@ function generator(node) {
       if(node.isFunc) {
         // 是不是基本函数
         if(node.isBaseFunc) {
-          FUNC_HANDLE_MAP[funcName](argArr.join(''))
-          res = `${FUNC_NAME_MAP[funcName]}(${argArr.join('')})`
+          let paramStr = FUNC_HANDLE_MAP[funcName](argArr.join(''))
+          res = `${FUNC_NAME_MAP[funcName]}(${paramStr})`
         } else {
           res = `function ${funcName}(${argArr.join(', ')})`
         }
