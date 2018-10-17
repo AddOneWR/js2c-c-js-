@@ -3,25 +3,22 @@ const common = require('./common');
 const FUNC_NAME_MAP = require('./func-name-map');
 const FUNC_HANDLE_MAP = require('./func-handle-map');
 
-const inputArr = [
-  `
-    int add(a,b){
-      int sum = a + b;
-      return sum;
-    };
-    int main() {
-      string str = "hello world";
-      int a = 3, b = 1;
-      int res = add(a, b);
-      if( res > a ) {
-        printf("the result is %d", res);
-      } else {
-        printf("%s", str);
-      };
-      return 0;
-    }
-  `
-];
+const input = 
+`int add(a,b){
+  int sum = a + b;
+  return sum;
+};
+int main() {
+  string str = "hello world";
+  int a = 3, b = 1;
+  int res = add(a, b);
+  if( res > a ) {
+    printf("the result is %d", res);
+  } else {
+    printf("%s", str);
+  };
+  return 0;
+}`
 
 const WHITESPACE = /\s/;
 const WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!]/i;
@@ -516,5 +513,6 @@ function compiler(input) {
   util.logg(output);
 }
 
-inputArr.forEach(item => compiler(item));
+compiler(input)
 
+module.exports = compiler;
