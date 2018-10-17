@@ -6,15 +6,17 @@ const FUNC_HANDLE_MAP = require('./func-handle-map');
 const inputArr = [
   `
     int add(a,b){
-      double c = 1;
+      int sum = a + b;
+      return sum;
     };
     int main() {
       string str = "hello world";
       int a = 3, b = 1;
-      if ( a === 3 ) {
-        printf("num1: %d, num2: %d", a, b);
-      } else if ( a === 1 ) {
-        printf("no pass");
+      int res = add(a, b);
+      if( res > a ) {
+        printf("the result is %d", res);
+      } else {
+        printf("%s", str);
       };
       return 0;
     }
@@ -22,8 +24,7 @@ const inputArr = [
 ];
 
 const WHITESPACE = /\s/;
-const NUMBER = /[0-9]/;
-const WORD = /[a-z | :~,'"%=+/\-*/^></\[/\]!]/i;
+const WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!]/i;
 
 // 字符串转token
 function tokenizer(input) {
@@ -50,8 +51,7 @@ function tokenizer(input) {
       tokens.push({
         type: 'state',
         value: 'var'
-      })
-
+      });
 
       continue;
     }
@@ -116,27 +116,11 @@ function tokenizer(input) {
       continue;
     }
 
-    if (NUMBER.test(char)) {
-      let num_str = '';
-
-      // 遍历到不再是数字
-      while(NUMBER.test(char) && char) {
-        num_str += char;
-        char = input[++current];
-      }
-
-      tokens.push({
-        type: 'number',
-        value: num_str
-      })
-      
-      continue;
-    }
-
+    // 检查是否为字符
     if (WORD.test(char)) {
-      // 处理与num类似
       let word_str = '';
 
+      // 直到遇到非字符
       while(WORD.test(char) && char) {
         word_str += char;
         char = input[++current];
@@ -166,17 +150,6 @@ function parser(tokens) {
     // 遍历token数组
 
     let token = tokens[current];
-
-    // 判断是否为number类型
-    if(token.type === 'number') {
-      current++;
-
-      // 返回ast节点
-      return {
-        type: 'NumberLiteral',
-        value: token.value
-      }
-    }
 
     // 判断是否为string类型
     if(token.type === 'string') {
@@ -241,7 +214,8 @@ function parser(tokens) {
         params: [],
         name: '',
         isFunc: true,
-        isBaseFunc: true
+        isBaseFunc: true,
+        isExistFunc: false
       }
 
       // 获取函数名
@@ -265,6 +239,11 @@ function parser(tokens) {
             node.isBaseFunc = false;
           }
 
+          // 判断是否为已有函数
+          let isExistFunc = common.isExistFunc(node.name);
+          if(isExistFunc) {
+            node.isExistFunc = true;
+          }
         }
       }
       
@@ -345,10 +324,7 @@ function astTraver(ast, visitor) {
         nodeArrTraver(node.params, node);
         break;
       
-      // number, string, state等没有子节点，跳过
-      case 'NumberLiteral':
-        break;
-      
+      // string, state等没有子节点，跳过
       case 'StringLiteral':
         break;
 
@@ -386,18 +362,9 @@ function transformer(ast) {
   ast._context = newAst.body;
 
   astTraver(ast, {
-
-    // 处理number
-    NumberLiteral: function(node, parent) {
-      // 创建新节点放入父节点context
-      parent._context.push({
-        type: 'NumberLiteral',
-        value: node.value
-      });
-    },
-
     // 处理string
     StringLiteral: function(node, parent) {
+      // 创建新节点放入父节点context
       parent._context.push({
         type: 'StringLiteral',
         value: node.value
@@ -447,6 +414,7 @@ function transformer(ast) {
         },
         isFunc: node.isFunc,
         isBaseFunc: node.isBaseFunc,
+        isExistFunc: node.isExistFunc,
         arguments: []
       };
 
@@ -490,12 +458,15 @@ function generator(node) {
 
       // 是函数
       if(node.isFunc) {
-        // 是不是基本函数
         if(node.isBaseFunc) {
-          let paramStr = FUNC_HANDLE_MAP[funcName](argArr.join(''))
-          res = `${FUNC_NAME_MAP[funcName]}(${paramStr})`
+          // 如果是基本函数
+          let paramStr = FUNC_HANDLE_MAP[funcName](argArr.join(''));
+          res = `${FUNC_NAME_MAP[funcName]}(${paramStr})`;
+        } else if(node.isExistFunc) {
+          //如果是已存在函数
+          res = `var ${funcName}(${argArr.join(', ')})`;
         } else {
-          res = `function ${funcName}(${argArr.join(', ')})`
+          res = `function ${funcName}(${argArr.join(', ')})`;
         }
       } else {
         // 不是函数

@@ -46,6 +46,14 @@ const common = {
     }
 
     return false;
+  },
+
+  isExistFunc: function(name) {
+    if(name.includes('=')) {
+      return true;
+    }
+
+    return false;
   }
 }
 
