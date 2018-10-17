@@ -1,5 +1,6 @@
 const IFELSE = /^(if|else|else if)[\s]*$/;
 const BASEFUNC = /^(print|printf)[\s]*$/;
+const shorChar = ['c', 'i', 's', 'l', 'd', 'f'];
 
 const common = {
   isState: function(char, current, input) {
@@ -7,7 +8,7 @@ const common = {
     let str = input.slice(current, current + 7);
   
     if(str.indexOf("char") != -1 || str.indexOf("int") != -1 || str.indexOf("short") != -1 || str.indexOf("long") != -1 || str.indexOf("double") != -1 || str.indexOf("float") != -1 || str.indexOf("string") != -1) {
-      if(char != 'c' && char != 'i' && char != 's' && char != 'l' && char != 'd' && char != 'f'){
+      if(!shorChar.includes(char)){
         return false;
       }
       if(str.indexOf(' ') === -1) {

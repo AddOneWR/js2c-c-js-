@@ -8,13 +8,16 @@ const inputArr = [
     int add(a,b){
       double c = 1;
     };
-    string str = "hello world";
-    int a = 3;
-    if ( a === 3 ) {
-      printf("num1: %d, num2: %d", a, b);
-    } else if ( a === 1 ) {
-      printf("no pass");
-    };
+    int main() {
+      string str = "hello world";
+      int a = 3, b = 1;
+      if ( a === 3 ) {
+        printf("num1: %d, num2: %d", a, b);
+      } else if ( a === 1 ) {
+        printf("no pass");
+      };
+      return 0;
+    }
   `
 ];
 
@@ -41,7 +44,6 @@ function tokenizer(input) {
       // 获取声明后空格索引
       let temp_index = input.slice(current, current + 10).indexOf(' ');
       // 获取声明
-      // let temp_state = input.slice(current, temp_index)
       
       current = current + temp_index + 1;
 
@@ -239,7 +241,7 @@ function parser(tokens) {
         params: [],
         name: '',
         isFunc: true,
-        isBaseFunc: false
+        isBaseFunc: true
       }
 
       // 获取函数名
@@ -251,21 +253,22 @@ function parser(tokens) {
 
         // 判断是否为函数
         let isNotFunc = common.isNotFunc(node.name);
+
         if(isNotFunc) {
           node.isFunc = false;
         } else {
-
           // 判断是否为基本函数
           let isBaseFunc = common.isBaseFunc(node.name);
 
-          if(isBaseFunc) {
-            node.isBaseFunc = true;
+          if(!isBaseFunc) {
+            ast.body.removeByLastValObj('var');
+            node.isBaseFunc = false;
           }
+
         }
       }
       
       // 删除函数前面的state声明
-      ast.body.removeByIndex(current - 2);
 
       // 跳过括号并且获取下一个token
       token = tokens[++current];
@@ -275,6 +278,11 @@ function parser(tokens) {
         // 参数放入params
         node.params.push(getAst());
         token = tokens[current];
+
+        if(!token) {
+          util.errLogg('parser过程出错', `存在括号未闭合错误<${current}>`);
+          break;
+        }
       }
 
       // 跳过右括号
@@ -282,7 +290,8 @@ function parser(tokens) {
       return node;
     }
 
-    util.errLogg('parser', token.type);
+    util.errLogg('parser过程出错', `发现未知类型${token.type}`);
+
     current++;
     return;
   }
@@ -312,6 +321,12 @@ function astTraver(ast, visitor) {
   }
 
   function nodeTraver(node, parent) {
+
+    if (!node) {
+      util.errLogg('astTraver过程出错', `括号未闭合或出现未知类型<${parent.type}>`);
+      return;
+    }
+
     // 获取当前节点处理函数
     let method = visitor[node.type];
 
@@ -350,7 +365,7 @@ function astTraver(ast, visitor) {
         break;
       
       default:
-        util.errLogg('astTraver', node.type);
+        util.errLogg('astTraver过程出错', `发现未知类型${node.type}`);
     }
   }
 
@@ -515,19 +530,19 @@ function generator(node) {
       );
 
     default:
-      util.errLogg('generator', node.type);
+      util.errLogg('generator过程出错', `发现未知类型${node.type}`);
   }
 }
 
 function compiler(input) {
   let tokens = tokenizer(input);
-  util.logg(tokens);
+  // util.logg(tokens);
   let ast = parser(tokens);
-  util.logg(ast);
+  // util.logg(ast);
   let newAst = transformer(ast);
-  util.logg(newAst);
+  // util.logg(newAst);
   let output = generator(newAst);
-  util.logg(output)
+  util.logg(output);
 }
 
 inputArr.forEach(item => compiler(item));
