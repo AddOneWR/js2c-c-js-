@@ -24,7 +24,9 @@ int main() {
 }`
 
 const WHITESPACE = /\s/;
-const WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!.]/i;
+const WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!.&]/i;
+
+let isParWord = false; // 是否为出现在字符串中的括号， 若存在则不单独匹配成一个括号
 
 // 字符串转token
 function tokenizer(input) {
@@ -57,6 +59,7 @@ function tokenizer(input) {
     }
     // 检查是否为括号
     if (char === '(') {
+      isParWord = true; // 在括号中
 
       // token添加
       tokens.push({
@@ -69,6 +72,8 @@ function tokenizer(input) {
     }
     
     if (char === ')') {
+      isParWord = false; // 括号结束
+
       tokens.push({
         type: 'paren',
         value: ')'
@@ -120,8 +125,10 @@ function tokenizer(input) {
     if (WORD.test(char)) {
       let word_str = '';
 
-      // 直到遇到非字符
-      while(WORD.test(char) && char) {
+      // 直到遇到非字符，如果为字符串中的左括号或者右括号也加入字符串中
+      // 左括号通过之前的起始(来判断是否在字符串中
+      // 右括号通过判断其后面是否有'来确认是否为终结括号
+      while((WORD.test(char) && char) || (char === '(' && isParWord) || (char === ')' && input[current + 1] === "'")) {
         word_str += char;
         char = input[++current];
       }
@@ -130,6 +137,15 @@ function tokenizer(input) {
         type: 'string',
         value: word_str
       })
+
+      continue;
+    }
+
+    // 检查是否为库声明
+    if (char === '#') {
+      while(char != '\n') {
+        char = input[++current];
+      }
 
       continue;
     }
@@ -206,6 +222,7 @@ function parser(tokens) {
       };
     }
 
+
     // 判断是否为括号
     if(token.type === 'paren' && token.value === '(') {
       // 创建CallExpression节点
@@ -252,10 +269,16 @@ function parser(tokens) {
       // 跳过括号并且获取下一个token
       token = tokens[++current];
 
+      let tempAst; // 暂存参数
+
       // 继续遍历直到遇到右括号
       while ((token.type !== 'paren') || (token.type === 'paren' && token.value !== ')')) {
         // 参数放入params
-        node.params.push(getAst());
+        tempAst = getAst();
+        if(tempAst.type === 'StateLiteral') continue;
+
+        node.params.push(tempAst);
+
         token = tokens[current];
 
         if(!token) {
@@ -263,7 +286,6 @@ function parser(tokens) {
           break;
         }
       }
-
       // 跳过右括号
       current++;
       return node;
@@ -437,6 +459,8 @@ function transformer(ast) {
   return newAst;
 }
 
+let notFunc = true; // 标记是否为if,else,for,while
+
 // 打印ast中节点拼接成字符串
 function generator(node) {
   switch (node.type) {
@@ -452,6 +476,7 @@ function generator(node) {
 
     // 对于CallExpressions，我们打印出callee和左括号，然后递归调用其参数，最后加上右括号
     case 'CallExpression':
+      notFunc = false; // 设为false 检测到此值分号不换行
       let funcName = generator(node.callee);
       let argArr = node.arguments.map(generator);
       let res;
@@ -473,6 +498,7 @@ function generator(node) {
         res = `${funcName}(${argArr.join('')})`;
       }
 
+      notFunc = true;
       return res;
   
     // 返回name
@@ -490,7 +516,7 @@ function generator(node) {
       return node.value + ' ';
     
     case 'SemLiteral':
-      return ';\n';
+      return (';' + (notFunc ? '\n' : ''));
     
     case 'WhiteLiteral':
       return ' ';
@@ -507,11 +533,11 @@ function generator(node) {
 
 function compiler(input) {
   let tokens = tokenizer(input);
-  // util.logg(tokens);
+  util.logg(tokens);
   let ast = parser(tokens);
-  // util.logg(ast);
+  util.logg(ast);
   let newAst = transformer(ast);
-  // util.logg(newAst);
+  util.logg(newAst);
   let output = generator(newAst);
   // util.logg(output);
   return output;

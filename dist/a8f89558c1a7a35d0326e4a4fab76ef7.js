@@ -128,16 +128,16 @@ var util = {
 
 module.exports = util;
 },{}],21:[function(require,module,exports) {
-var IFELSE = /^(if|else|else if)[\s]*$/;
+var NOTFUNC = /^(if|else|else if|for|while)[\s]*$/;
 var BASEFUNC = /^(print|printf)[\s]*$/;
-var shorChar = ['c', 'i', 's', 'l', 'd', 'f'];
+var shorChar = ['c', 'i', 's', 'l', 'd', 'f', 'b'];
 
 var common = {
   isState: function isState(char, current, input) {
 
     var str = input.slice(current, current + 7);
 
-    if (str.indexOf("char") != -1 || str.indexOf("int") != -1 || str.indexOf("short") != -1 || str.indexOf("long") != -1 || str.indexOf("double") != -1 || str.indexOf("float") != -1 || str.indexOf("string") != -1) {
+    if (str.indexOf("char") != -1 || str.indexOf("int") != -1 || str.indexOf("short") != -1 || str.indexOf("long") != -1 || str.indexOf("double") != -1 || str.indexOf("float") != -1 || str.indexOf("string") != -1 || str.indexOf("bool") != -1) {
       if (!shorChar.includes(char)) {
         return false;
       }
@@ -162,7 +162,7 @@ var common = {
   },
 
   isNotFunc: function isNotFunc(name) {
-    if (IFELSE.test(name)) {
+    if (NOTFUNC.test(name)) {
       return true;
     }
 
@@ -248,7 +248,9 @@ var FUNC_HANDLE_MAP = require('./func-handle-map');
 var input = '\n#include "stdlib.h"\n\nint add(a,b){\n  int sum = a + b;\n  return sum;\n};\nint main() {\n  string str = "hello world";\n  int a = 3, b = 1;\n  int res = add(a, b);\n  if( res > a ) {\n    printf("the result is %d", res);\n  } else {\n    printf("%s", str);\n  };\n  return 0;\n}';
 
 var WHITESPACE = /\s/;
-var WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!.]/i;
+var WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!.&]/i;
+
+var isParWord = false; // 是否为出现在字符串中的括号， 若存在则不单独匹配成一个括号
 
 // 字符串转token
 function tokenizer(input) {
@@ -281,6 +283,7 @@ function tokenizer(input) {
     }
     // 检查是否为括号
     if (char === '(') {
+      isParWord = true; // 在括号中
 
       // token添加
       tokens.push({
@@ -293,6 +296,8 @@ function tokenizer(input) {
     }
 
     if (char === ')') {
+      isParWord = false; // 括号结束
+
       tokens.push({
         type: 'paren',
         value: ')'
@@ -344,8 +349,10 @@ function tokenizer(input) {
     if (WORD.test(char)) {
       var word_str = '';
 
-      // 直到遇到非字符
-      while (WORD.test(char) && char) {
+      // 直到遇到非字符，如果为字符串中的左括号或者右括号也加入字符串中
+      // 左括号通过之前的起始(来判断是否在字符串中
+      // 右括号通过判断其后面是否有'来确认是否为终结括号
+      while (WORD.test(char) && char || char === '(' && isParWord || char === ')' && input[current + 1] === "'") {
         word_str += char;
         char = input[++current];
       }
@@ -354,6 +361,15 @@ function tokenizer(input) {
         type: 'string',
         value: word_str
       });
+
+      continue;
+    }
+
+    // 检查是否为库声明
+    if (char === '#') {
+      while (char != '\n') {
+        char = input[++current];
+      }
 
       continue;
     }
@@ -475,10 +491,16 @@ function parser(tokens) {
       // 跳过括号并且获取下一个token
       token = tokens[++current];
 
+      var tempAst = void 0; // 暂存参数
+
       // 继续遍历直到遇到右括号
       while (token.type !== 'paren' || token.type === 'paren' && token.value !== ')') {
         // 参数放入params
-        node.params.push(getAst());
+        tempAst = getAst();
+        if (tempAst.type === 'StateLiteral') continue;
+
+        node.params.push(tempAst);
+
         token = tokens[current];
 
         if (!token) {
@@ -486,7 +508,6 @@ function parser(tokens) {
           break;
         }
       }
-
       // 跳过右括号
       current++;
       return node;
@@ -659,6 +680,8 @@ function transformer(ast) {
   return newAst;
 }
 
+var notFunc = true; // 标记是否为if,else,for,while
+
 // 打印ast中节点拼接成字符串
 function generator(node) {
   switch (node.type) {
@@ -672,6 +695,7 @@ function generator(node) {
 
     // 对于CallExpressions，我们打印出callee和左括号，然后递归调用其参数，最后加上右括号
     case 'CallExpression':
+      notFunc = false; // 设为false 检测到此值分号不换行
       var funcName = generator(node.callee);
       var argArr = node.arguments.map(generator);
       var res = void 0;
@@ -693,6 +717,7 @@ function generator(node) {
         res = funcName + '(' + argArr.join('') + ')';
       }
 
+      notFunc = true;
       return res;
 
     // 返回name
@@ -710,7 +735,7 @@ function generator(node) {
       return node.value + ' ';
 
     case 'SemLiteral':
-      return ';\n';
+      return ';' + (notFunc ? '\n' : '');
 
     case 'WhiteLiteral':
       return ' ';
@@ -725,11 +750,11 @@ function generator(node) {
 
 function compiler(input) {
   var tokens = tokenizer(input);
-  // util.logg(tokens);
+  util.logg(tokens);
   var ast = parser(tokens);
-  // util.logg(ast);
+  util.logg(ast);
   var newAst = transformer(ast);
-  // util.logg(newAst);
+  util.logg(newAst);
   var output = generator(newAst);
   // util.logg(output);
   return output;
@@ -740,6 +765,12 @@ function compiler(input) {
 module.exports = compiler;
 },{"./util":20,"./common":21,"./func-name-map":22,"./func-handle-map":23}],18:[function(require,module,exports) {
 var compiler = require('./index');
+
+var input = '#include "stdio.h";\nint add(int a,b){\n  int sum = a + b;\n  return sum;\n};\nint main() {\n  string str = "hello world";\n  int a = 3, b = 1;\n  int res = add(a, b);\n  if( res > a ) {\n    printf("the result is %d", res);\n  } else {\n    printf("%s", str);\n  };\n  return 0;\n}';
+
+var test = 'int a(int a)';
+
+document.getElementById('input').value = input;
 
 document.getElementById('transformBtn').addEventListener('click', function () {
   var value = document.getElementById('input').value;
@@ -757,7 +788,7 @@ document.getElementById('executeBtn').addEventListener('click', function () {
     alert(err);
   }
 });
-},{"./index":19}],27:[function(require,module,exports) {
+},{"./index":19}],31:[function(require,module,exports) {
 
 var global = (1, eval)('this');
 var OldModule = module.bundle.Module;
@@ -880,5 +911,5 @@ function hmrAccept(bundle, id) {
     return hmrAccept(global.require, id);
   });
 }
-},{}]},{},[27,18])
+},{}]},{},[31,18])
 //# sourceMappingURL=/dist/a8f89558c1a7a35d0326e4a4fab76ef7.map

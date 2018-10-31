@@ -1,13 +1,13 @@
-const IFELSE = /^(if|else|else if)[\s]*$/;
+const NOTFUNC = /^(if|else|else if|for|while)[\s]*$/;
 const BASEFUNC = /^(print|printf)[\s]*$/;
-const shorChar = ['c', 'i', 's', 'l', 'd', 'f'];
+const shorChar = ['c', 'i', 's', 'l', 'd', 'f', 'b'];
 
 const common = {
   isState: function(char, current, input) {
 
     let str = input.slice(current, current + 7);
   
-    if(str.indexOf("char") != -1 || str.indexOf("int") != -1 || str.indexOf("short") != -1 || str.indexOf("long") != -1 || str.indexOf("double") != -1 || str.indexOf("float") != -1 || str.indexOf("string") != -1) {
+    if(str.indexOf("char") != -1 || str.indexOf("int") != -1 || str.indexOf("short") != -1 || str.indexOf("long") != -1 || str.indexOf("double") != -1 || str.indexOf("float") != -1 || str.indexOf("string") != -1 || str.indexOf("bool") != -1) {
       if(!shorChar.includes(char)){
         return false;
       }
@@ -32,7 +32,7 @@ const common = {
   },
 
   isNotFunc: function(name) {
-    if(IFELSE.test(name)) {
+    if(NOTFUNC.test(name)) {
       return true;
     }
 
