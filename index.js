@@ -4,7 +4,10 @@ const FUNC_NAME_MAP = require('./func-name-map');
 const FUNC_HANDLE_MAP = require('./func-handle-map');
 
 const input = 
-`int add(a,b){
+`
+#include "stdlib.h"
+
+int add(a,b){
   int sum = a + b;
   return sum;
 };
@@ -21,7 +24,7 @@ int main() {
 }`
 
 const WHITESPACE = /\s/;
-const WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!]/i;
+const WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!.]/i;
 
 // 字符串转token
 function tokenizer(input) {
@@ -510,9 +513,10 @@ function compiler(input) {
   let newAst = transformer(ast);
   // util.logg(newAst);
   let output = generator(newAst);
-  util.logg(output);
+  // util.logg(output);
+  return output;
 }
 
-compiler(input)
+// compiler(input);
 
 module.exports = compiler;
