@@ -133,7 +133,7 @@ var util = {
 };
 
 module.exports = util;
-},{}],13:[function(require,module,exports) {
+},{}],12:[function(require,module,exports) {
 var NOTFUNC = /^(if|else|else if|for|while)[\s]*$/;
 var BASEFUNC = /^(print|printf)[\s]*$/;
 var shorChar = ['c', 'i', 's', 'l', 'd', 'f', 'b'];
@@ -194,13 +194,13 @@ var common = {
 };
 
 module.exports = common;
-},{}],15:[function(require,module,exports) {
+},{}],13:[function(require,module,exports) {
 var FUNC_NAME_MAP = {
   'printf': 'console.log'
 };
 
 module.exports = FUNC_NAME_MAP;
-},{}],17:[function(require,module,exports) {
+},{}],14:[function(require,module,exports) {
 var FUNC_HANDLE_MAP = {
   printf: function printf(arg) {
     var lastQuoIndex = arg.lastIndexOf('"');
@@ -822,7 +822,7 @@ function compiler(input) {
 // compiler(input);
 
 module.exports = compiler;
-},{"./util":11,"./common":13,"./func-name-map":15,"./func-handle-map":17}],7:[function(require,module,exports) {
+},{"./util":11,"./common":12,"./func-name-map":13,"./func-handle-map":14}],5:[function(require,module,exports) {
 var compiler = require('./index');
 
 var input = '#include "stdio.h";\nint add(int a,b){\n  int sum = a + b;\n  return sum;\n};\nint main() {\n  string str = "hello world";\n  int a = 3, b = 1;\n  int res = add(a, b);\n  if( res > a ) {\n    printf("the result is %d", res);\n  } else {\n    printf("%s", str);\n  };\n  return 0;\n}';
@@ -847,7 +847,7 @@ document.getElementById('executeBtn').addEventListener('click', function () {
     alert(err);
   }
 });
-},{"./index":9}],24:[function(require,module,exports) {
+},{"./index":9}],19:[function(require,module,exports) {
 
 var global = (1, eval)('this');
 var OldModule = module.bundle.Module;
@@ -869,7 +869,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = '' || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + '49260' + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + '57246' + '/');
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
 
@@ -970,5 +970,5 @@ function hmrAccept(bundle, id) {
     return hmrAccept(global.require, id);
   });
 }
-},{}]},{},[24,7])
+},{}]},{},[19,5])
 //# sourceMappingURL=/dist/a8f89558c1a7a35d0326e4a4fab76ef7.map
