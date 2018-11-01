@@ -25,6 +25,7 @@ int main() {
 
 const WHITESPACE = /\s/;
 const WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!.&]/i;
+const NEWLINE = '\n';
 
 let isParWord = false; // 是否为出现在字符串中的括号， 若存在则不单独匹配成一个括号
 
@@ -111,6 +112,14 @@ function tokenizer(input) {
       continue;
     }
 
+    // 检查是否为换行
+    if (char === NEWLINE) {
+      tokens.push({
+        type: 'newline',
+        value: '\n'
+      })
+    }
+
     // 检查是否为空格
     if (WHITESPACE.test(char)) {
       tokens.push({
@@ -156,6 +165,8 @@ function tokenizer(input) {
   return tokens;
 }
 
+let isArr = false;
+
 // tokens转ast
 function parser(tokens) {
   let current = 0;
@@ -177,6 +188,15 @@ function parser(tokens) {
         return null;
       }
 
+      // 是否为数组声明
+
+      if(next_token && next_token.type === 'parenb' && next_token.value === '{') {
+        let curValue = tokens[current - 1].value;
+        let arrValue = curValue.removeStrByIndex(curValue.indexOf('['), curValue.indexOf(']'));
+
+        tokens[current - 1].value = arrValue;
+        console.log(arrValue)
+      }
       // 否则返回string
       return {
         type: 'StringLiteral',
@@ -202,6 +222,15 @@ function parser(tokens) {
       }
     }
 
+    if(token.type === 'newline') {
+      current++;
+
+      return {
+        type: 'LineLiteral',
+        value: token.value
+      }
+    }
+
     // 判断是否为类型声明
     if(token.type === 'state') {
       current++;
@@ -212,13 +241,24 @@ function parser(tokens) {
       }
     }
 
-    // 判断是否为大括号
+    // 判断是否为大括号 其中判断是否为数组声明
     if (token.type === 'parenb' && (token.value === '{' || token.value === '}')) {
+      let value = token.value;
+      if((tokens[current - 1].type === 'string' && tokens[current - 1].value.search('=') != -1) || isArr){
+        isArr = true;
+        if(token.value === '{'){
+          value = '[';
+        } else if (token.value === '}') {
+          value = ']';
+          isArr = false;
+        }
+      }
+      
       current++;
 
       return {
         type: 'ParenbLiteral',
-        value: token.value
+        value: value
       };
     }
 
@@ -359,6 +399,9 @@ function astTraver(ast, visitor) {
       case 'WhiteLiteral':
         break;
 
+      case 'LineLiteral':
+        break;
+
       case 'ParenbLiteral':
         break;
       
@@ -413,6 +456,13 @@ function transformer(ast) {
     WhiteLiteral: function(node, parent) {
       parent._context.push({
         type: 'WhiteLiteral',
+        value: node.value
+      })
+    },
+
+    LineLiteral: function(node, parent) {
+      parent._context.push({
+        type: 'LineLiteral',
         value: node.value
       })
     },
@@ -516,15 +566,16 @@ function generator(node) {
       return node.value + ' ';
     
     case 'SemLiteral':
-      return (';' + (notFunc ? '\n' : ''));
+      return ';';
     
     case 'WhiteLiteral':
       return ' ';
+    
+    case 'LineLiteral':
+      return '\n';
 
     case 'ParenbLiteral':
-      return (
-        node.value + (node.value === '{' ? '\n' : '')
-      );
+      return node.value;
 
     default:
       util.errLogg('generator过程出错', `发现未知类型${node.type}`);

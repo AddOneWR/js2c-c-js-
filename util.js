@@ -32,8 +32,14 @@ Array.prototype.removeByIndex = function(index) {
 
 // 全部替换
 String.prototype.replaceAll = function(f, e) {
-  const reg = new RegExp(f, "g");  
+  let reg = new RegExp(f, "g");  
   return this.replace(reg, e); 
+}
+
+String.prototype.removeStrByIndex = function(start, end) {
+  let firstStr = this.slice(0, start);
+  let lastStr = this.slice(end + 1);
+  return firstStr + lastStr;
 }
 
 const util = {

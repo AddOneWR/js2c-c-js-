@@ -71,7 +71,7 @@ require = (function (modules, cache, entry) {
 
   // Override the current require with this new one
   return newRequire;
-})({20:[function(require,module,exports) {
+})({11:[function(require,module,exports) {
 // 按值删除数组中元素
 Array.prototype.removeByVal = function (val) {
   var index = this.indexOf(val);
@@ -110,6 +110,12 @@ String.prototype.replaceAll = function (f, e) {
   return this.replace(reg, e);
 };
 
+String.prototype.removeStrByIndex = function (start, end) {
+  var firstStr = this.slice(0, start);
+  var lastStr = this.slice(end + 1);
+  return firstStr + lastStr;
+};
+
 var util = {
   logg: function logg(content) {
     console.log('--------------------------------------------\n');
@@ -127,7 +133,7 @@ var util = {
 };
 
 module.exports = util;
-},{}],21:[function(require,module,exports) {
+},{}],13:[function(require,module,exports) {
 var NOTFUNC = /^(if|else|else if|for|while)[\s]*$/;
 var BASEFUNC = /^(print|printf)[\s]*$/;
 var shorChar = ['c', 'i', 's', 'l', 'd', 'f', 'b'];
@@ -188,13 +194,13 @@ var common = {
 };
 
 module.exports = common;
-},{}],22:[function(require,module,exports) {
+},{}],15:[function(require,module,exports) {
 var FUNC_NAME_MAP = {
   'printf': 'console.log'
 };
 
 module.exports = FUNC_NAME_MAP;
-},{}],23:[function(require,module,exports) {
+},{}],17:[function(require,module,exports) {
 var FUNC_HANDLE_MAP = {
   printf: function printf(arg) {
     var lastQuoIndex = arg.lastIndexOf('"');
@@ -239,7 +245,7 @@ var FUNC_HANDLE_MAP = {
 };
 
 module.exports = FUNC_HANDLE_MAP;
-},{}],19:[function(require,module,exports) {
+},{}],9:[function(require,module,exports) {
 var util = require('./util');
 var common = require('./common');
 var FUNC_NAME_MAP = require('./func-name-map');
@@ -249,6 +255,7 @@ var input = '\n#include "stdlib.h"\n\nint add(a,b){\n  int sum = a + b;\n  retur
 
 var WHITESPACE = /\s/;
 var WORD = /[a-z0-9 | :~,'"%=+/\-*/^></\[/\]!.&]/i;
+var NEWLINE = '\n';
 
 var isParWord = false; // 是否为出现在字符串中的括号， 若存在则不单独匹配成一个括号
 
@@ -335,6 +342,14 @@ function tokenizer(input) {
       continue;
     }
 
+    // 检查是否为换行
+    if (char === NEWLINE) {
+      tokens.push({
+        type: 'newline',
+        value: '\n'
+      });
+    }
+
     // 检查是否为空格
     if (WHITESPACE.test(char)) {
       tokens.push({
@@ -380,6 +395,8 @@ function tokenizer(input) {
   return tokens;
 }
 
+var isArr = false;
+
 // tokens转ast
 function parser(tokens) {
   var current = 0;
@@ -401,6 +418,15 @@ function parser(tokens) {
         return null;
       }
 
+      // 是否为数组声明
+
+      if (next_token && next_token.type === 'parenb' && next_token.value === '{') {
+        var curValue = tokens[current - 1].value;
+        var arrValue = curValue.removeStrByIndex(curValue.indexOf('['), curValue.indexOf(']'));
+
+        tokens[current - 1].value = arrValue;
+        console.log(arrValue);
+      }
       // 否则返回string
       return {
         type: 'StringLiteral',
@@ -426,6 +452,15 @@ function parser(tokens) {
       };
     }
 
+    if (token.type === 'newline') {
+      current++;
+
+      return {
+        type: 'LineLiteral',
+        value: token.value
+      };
+    }
+
     // 判断是否为类型声明
     if (token.type === 'state') {
       current++;
@@ -436,13 +471,24 @@ function parser(tokens) {
       };
     }
 
-    // 判断是否为大括号
+    // 判断是否为大括号 其中判断是否为数组声明
     if (token.type === 'parenb' && (token.value === '{' || token.value === '}')) {
+      var value = token.value;
+      if (tokens[current - 1].type === 'string' && tokens[current - 1].value.search('=') != -1 || isArr) {
+        isArr = true;
+        if (token.value === '{') {
+          value = '[';
+        } else if (token.value === '}') {
+          value = ']';
+          isArr = false;
+        }
+      }
+
       current++;
 
       return {
         type: 'ParenbLiteral',
-        value: token.value
+        value: value
       };
     }
 
@@ -580,6 +626,9 @@ function astTraver(ast, visitor) {
       case 'WhiteLiteral':
         break;
 
+      case 'LineLiteral':
+        break;
+
       case 'ParenbLiteral':
         break;
 
@@ -634,6 +683,13 @@ function transformer(ast) {
     WhiteLiteral: function WhiteLiteral(node, parent) {
       parent._context.push({
         type: 'WhiteLiteral',
+        value: node.value
+      });
+    },
+
+    LineLiteral: function LineLiteral(node, parent) {
+      parent._context.push({
+        type: 'LineLiteral',
         value: node.value
       });
     },
@@ -735,13 +791,16 @@ function generator(node) {
       return node.value + ' ';
 
     case 'SemLiteral':
-      return ';' + (notFunc ? '\n' : '');
+      return ';';
 
     case 'WhiteLiteral':
       return ' ';
 
+    case 'LineLiteral':
+      return '\n';
+
     case 'ParenbLiteral':
-      return node.value + (node.value === '{' ? '\n' : '');
+      return node.value;
 
     default:
       util.errLogg('generator过程出错', '\u53D1\u73B0\u672A\u77E5\u7C7B\u578B' + node.type);
@@ -763,12 +822,12 @@ function compiler(input) {
 // compiler(input);
 
 module.exports = compiler;
-},{"./util":20,"./common":21,"./func-name-map":22,"./func-handle-map":23}],18:[function(require,module,exports) {
+},{"./util":11,"./common":13,"./func-name-map":15,"./func-handle-map":17}],7:[function(require,module,exports) {
 var compiler = require('./index');
 
 var input = '#include "stdio.h";\nint add(int a,b){\n  int sum = a + b;\n  return sum;\n};\nint main() {\n  string str = "hello world";\n  int a = 3, b = 1;\n  int res = add(a, b);\n  if( res > a ) {\n    printf("the result is %d", res);\n  } else {\n    printf("%s", str);\n  };\n  return 0;\n}';
 
-var test = 'int a(int a)';
+var test = 'int a[5] = {1,2,3,4,5};';
 
 document.getElementById('input').value = input;
 
@@ -788,7 +847,7 @@ document.getElementById('executeBtn').addEventListener('click', function () {
     alert(err);
   }
 });
-},{"./index":19}],31:[function(require,module,exports) {
+},{"./index":9}],24:[function(require,module,exports) {
 
 var global = (1, eval)('this');
 var OldModule = module.bundle.Module;
@@ -810,7 +869,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = '' || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + '56159' + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + '49260' + '/');
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
 
@@ -911,5 +970,5 @@ function hmrAccept(bundle, id) {
     return hmrAccept(global.require, id);
   });
 }
-},{}]},{},[31,18])
+},{}]},{},[24,7])
 //# sourceMappingURL=/dist/a8f89558c1a7a35d0326e4a4fab76ef7.map
