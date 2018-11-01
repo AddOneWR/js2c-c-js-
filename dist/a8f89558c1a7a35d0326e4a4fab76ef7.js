@@ -133,7 +133,7 @@ var util = {
 };
 
 module.exports = util;
-},{}],12:[function(require,module,exports) {
+},{}],13:[function(require,module,exports) {
 var NOTFUNC = /^(if|else|else if|for|while)[\s]*$/;
 var BASEFUNC = /^(print|printf)[\s]*$/;
 var shorChar = ['c', 'i', 's', 'l', 'd', 'f', 'b'];
@@ -194,13 +194,13 @@ var common = {
 };
 
 module.exports = common;
-},{}],13:[function(require,module,exports) {
+},{}],15:[function(require,module,exports) {
 var FUNC_NAME_MAP = {
   'printf': 'console.log'
 };
 
 module.exports = FUNC_NAME_MAP;
-},{}],14:[function(require,module,exports) {
+},{}],17:[function(require,module,exports) {
 var FUNC_HANDLE_MAP = {
   printf: function printf(arg) {
     var lastQuoIndex = arg.lastIndexOf('"');
@@ -420,7 +420,13 @@ function parser(tokens) {
 
       // 是否为数组声明
 
-      if (next_token && next_token.type === 'parenb' && next_token.value === '{') {
+      // 是否为初始赋值的数组
+      var isAssignArr = next_token && next_token.type === 'parenb' && next_token.value === '{' && tokens[current - 1].value.search('=') != -1;
+
+      // 是否为为赋值数组
+
+      var notAssignArr = tokens[current - 2] && tokens[current - 2].type === 'state' && tokens[current - 1].value.indexOf('[') != -1 && tokens[current - 1].value.indexOf(']') != -1;
+      if (isAssignArr || notAssignArr) {
         var curValue = tokens[current - 1].value;
         var arrValue = curValue.removeStrByIndex(curValue.indexOf('['), curValue.indexOf(']'));
 
@@ -822,12 +828,12 @@ function compiler(input) {
 // compiler(input);
 
 module.exports = compiler;
-},{"./util":11,"./common":12,"./func-name-map":13,"./func-handle-map":14}],5:[function(require,module,exports) {
+},{"./util":11,"./common":13,"./func-name-map":15,"./func-handle-map":17}],7:[function(require,module,exports) {
 var compiler = require('./index');
 
 var input = '#include "stdio.h";\nint add(int a,b){\n  int sum = a + b;\n  return sum;\n};\nint main() {\n  string str = "hello world";\n  int a = 3, b = 1;\n  int res = add(a, b);\n  if( res > a ) {\n    printf("the result is %d", res);\n  } else {\n    printf("%s", str);\n  };\n  return 0;\n}';
 
-var test = 'int a[5] = {1,2,3,4,5};';
+var test = 'int a[10];\nint a[5] = {1, 3, 4}';
 
 document.getElementById('input').value = input;
 
@@ -869,7 +875,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = '' || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + '57246' + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + '56647' + '/');
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
 
@@ -970,5 +976,5 @@ function hmrAccept(bundle, id) {
     return hmrAccept(global.require, id);
   });
 }
-},{}]},{},[19,5])
+},{}]},{},[19,7])
 //# sourceMappingURL=/dist/a8f89558c1a7a35d0326e4a4fab76ef7.map

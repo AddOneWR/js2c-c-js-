@@ -190,7 +190,13 @@ function parser(tokens) {
 
       // 是否为数组声明
 
-      if(next_token && next_token.type === 'parenb' && next_token.value === '{') {
+      // 是否为初始赋值的数组
+      let isAssignArr = (next_token && next_token.type === 'parenb' && next_token.value === '{' && tokens[current - 1].value.search('=') != -1);
+
+      // 是否为为赋值数组
+
+      let notAssignArr = (tokens[current - 2] && tokens[current - 2].type === 'state' && tokens[current - 1].value.indexOf('[') != -1 && tokens[current - 1].value.indexOf(']') != -1);
+      if(isAssignArr || notAssignArr) {
         let curValue = tokens[current - 1].value;
         let arrValue = curValue.removeStrByIndex(curValue.indexOf('['), curValue.indexOf(']'));
 

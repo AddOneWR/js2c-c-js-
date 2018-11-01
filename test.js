@@ -17,7 +17,8 @@ int main() {
   return 0;
 }`;
 
-let test = `int a[5] = {1,2,3,4,5};`
+let test = `int a[10];
+int a[5] = {1, 3, 4}`
 
 document.getElementById('input').value = input;
 
