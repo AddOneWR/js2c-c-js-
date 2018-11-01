@@ -875,7 +875,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = '' || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + '56647' + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + '63811' + '/');
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
 
@@ -977,4 +977,4 @@ function hmrAccept(bundle, id) {
   });
 }
 },{}]},{},[19,7])
-//# sourceMappingURL=/dist/a8f89558c1a7a35d0326e4a4fab76ef7.map
+//# sourceMappingURL=/js2c/a8f89558c1a7a35d0326e4a4fab76ef7.map
